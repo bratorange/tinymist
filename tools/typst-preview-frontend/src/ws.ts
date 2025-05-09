@@ -270,6 +270,8 @@ export async function wsMain({ url, previewMode, isContentPreview }: WsArgs) {
         );
 
         function processMessage(data: ArrayBuffer) {
+            console.time("processMessageFullExecution"); // ADD THIS LINE
+            try {   
             if (!(data instanceof ArrayBuffer)) {
                 if (data === NOT_AVAILABLE) {
                     return;
@@ -392,6 +394,10 @@ export async function wsMain({ url, previewMode, isContentPreview }: WsArgs) {
             }
 
             svgDoc.addChangement(message as any);
+
+            } finally {
+                console.timeEnd("processMessageFullExecution");
+            }
         };
 
         return dispose;
