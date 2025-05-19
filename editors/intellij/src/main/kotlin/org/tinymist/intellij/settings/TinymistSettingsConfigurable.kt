@@ -3,13 +3,7 @@ package org.tinymist.intellij.settings
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.diagnostic.Logger
-import com.redhat.devtools.lsp4ij.LanguageServerManager
-import com.redhat.devtools.lsp4ij.LanguageServersRegistry
-import com.redhat.devtools.lsp4ij.LanguageServerManager.StopOptions
-import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
-import com.redhat.devtools.lsp4ij.ServerStatus
-import com.redhat.devtools.lsp4ij.server.definition.LanguageServerDefinition
-import com.redhat.devtools.lsp4ij.server.definition.LanguageServerDefinitionListener.LanguageServerChangedEvent
+import dev.j_a.ide.lsp.api.LanguageServerManager
 import javax.swing.JComponent
 
 class TinymistSettingsConfigurable : Configurable {
@@ -19,7 +13,8 @@ class TinymistSettingsConfigurable : Configurable {
 
     companion object {
         private val LOG = Logger.getInstance(TinymistSettingsConfigurable::class.java)
-        private const val TINYMIST_SERVER_ID = "tinymistServer"
+        // The j-a.dev library uses the LanguageServerDescriptor instance for identification,
+        // so a static server ID string might not be directly used in the same way.
     }
 
     override fun getDisplayName(): String = "Tinymist LSP"
@@ -41,39 +36,32 @@ class TinymistSettingsConfigurable : Configurable {
 
         val pathChanged = currentSettingsPath != newPanelPath
 
-        // Always update the settings state with the panel's current value
         settingsService.state.tinymistExecutablePath = newPanelPath
 
         if (pathChanged) {
-            LOG.info("Tinymist executable path changed. Old: '$currentSettingsPath', New: '$newPanelPath'. Requesting server restart.")
+            LOG.info("Tinymist executable path changed. Old: '$currentSettingsPath', New: '$newPanelPath'. Requesting server restart for all projects.")
 
-            val registry = LanguageServersRegistry.getInstance()
-            val serverDefinition = registry.getServerDefinition(TINYMIST_SERVER_ID)
+            val openProjects = ProjectManager.getInstance().openProjects
+            if (openProjects.isEmpty()) {
+                LOG.info("No open projects to restart Tinymist server for.")
+                return
+            }
 
-            if (serverDefinition != null) {
-                LOG.debug("Found server definition: $serverDefinition for ID $TINYMIST_SERVER_ID")
-
-                ProjectManager.getInstance().openProjects.forEach { project ->
-                    if (!project.isDisposed && project.isOpen) {
-                        // Construct and fire the LanguageServerChangedEvent
-                        val event = LanguageServerChangedEvent(
-                            project,       // current project
-                            serverDefinition, // the definition of our server
-                            false,         // nameChanged
-                            true,          // commandChanged - THIS IS KEY
-                            false,         // userEnvironmentVariablesChanged
-                            false,         // includeSystemEnvironmentVariablesChanged
-                            false,         // mappingsChanged
-                            false,         // configurationContentChanged
-                            false,         // initializationOptionsContentChanged
-                            false          // clientConfigurationContentChanged
-                        )
-                        registry.handleChangeEvent(event) // Notify lsp4ij about the change
-                        LOG.info("Fired LanguageServerChangedEvent for project: ${project.name}. lsp4ij should handle server restart.")
+            openProjects.forEach { project ->
+                if (!project.isDisposed && project.isOpen) {
+                    val lspManager = LanguageServerManager.getInstance(project)
+                    // We need to find our specific server. The descriptor class can be used.
+                    // Assuming TinymistServerDescriptor is the one associated with TinymistLanguageServerSupport.
+                    val configurations = lspManager.getConfigurations(org.tinymist.intellij.lsp.TinymistLanguageServerSupport)
+                    if (configurations.isNotEmpty()) {
+                        configurations.forEach { config ->
+                            LOG.info("Restarting Tinymist server for project: ${project.name} with descriptor: ${config.descriptor::class.java.simpleName}")
+                            lspManager.restart(config.descriptor) // Restart using the descriptor
+                        }
+                    } else {
+                        LOG.warn("No active Tinymist server configuration found for project: ${project.name}. Restart will not be automatically triggered. It might start on next file open.")
                     }
                 }
-            } else {
-                LOG.warn("Could not find server definition for ID $TINYMIST_SERVER_ID. Server restart will not be automatically triggered.")
             }
         }
     }

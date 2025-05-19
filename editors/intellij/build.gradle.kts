@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.changelog) // Gradle Changelog Plugin
     alias(libs.plugins.qodana) // Gradle Qodana Plugin
     alias(libs.plugins.kover) // Gradle Kover Plugin
+    id("dev.j-a.gradle.lsp-shadow-plugin") version "0.3.2" // Add j-a.dev LSP shadow plugin
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -39,11 +40,13 @@ dependencies {
     // The repositories configured by the intellijPlatform plugin should contain this.
     // implementation("com.intellij.modules:platform-impl")
 
+    implementation("dev.j-a.ide:lsp-client:0.2.14") // Add j-a.dev LSP client library
+
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
         intellijIdeaUltimate("2025.1")
         testFramework(TestFrameworkType.Platform)
-        plugins(listOf("com.redhat.devtools.lsp4ij:0.13.0"))
+        // plugins(listOf("com.redhat.devtools.lsp4ij:0.13.0")) // Remove lsp4ij plugin
     }
 }
 
@@ -105,6 +108,11 @@ intellijPlatform {
             recommended()
         }
     }
+}
+
+// Configure j-a.dev LSP Shadow Plugin
+shadowLSP {
+    enabledLanguageIds = setOf("typst")
 }
 
 // Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin

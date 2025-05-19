@@ -1,5 +1,5 @@
 <!-- Basic plugin configuration -->
-<idea-plugin>
+<idea-plugin xmlns:xi="http://www.w3.org/2001/XInclude">
     <!-- Unique id for the plugin. Must stay constant for the lifetime of the plugin. -->
     <id>org.tinymist.intellij</id>
 
@@ -36,7 +36,10 @@
     <!-- Declare dependencies on other plugins or modules -->
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.ultimate</depends> <!-- Required for LSP API -->
-    <depends>com.redhat.devtools.lsp4ij</depends> <!-- Added dependency for LSP4IJ -->
+    <!-- <depends>com.redhat.devtools.lsp4ij</depends> --> <!-- Removed dependency for LSP4IJ -->
+
+    <!-- Include j-a.dev lsp-client base plugin configuration -->
+    <xi:include href="/META-INF/plugin-lsp-client.xml" xpointer="xpointer(/idea-plugin/*)"/>
 
     <!-- Extension points defined by the plugin. -->
     <extensions defaultExtensionNs="com.intellij">
@@ -50,9 +53,12 @@
         <applicationService serviceImplementation="org.tinymist.intellij.settings.TinymistSettingsService"/>
         <applicationConfigurable parentId="tools" instance="org.tinymist.intellij.settings.TinymistSettingsConfigurable" id="org.tinymist.intellij.settings.TinymistSettingsConfigurable" displayName="Tinymist LSP"/>
 
+        <!-- Project activity to register your LSP server type -->
+        <postStartupActivity implementation="org.tinymist.intellij.lsp.TinymistRegisterLanguageServerActivity"/>
     </extensions>
 
     <!-- LSP4IJ specific extensions -->
+    <!--
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
         <server id="tinymistServer"
                 name="Tinymist Language Server" 
@@ -65,6 +71,7 @@
                                 serverId="tinymistServer"
                                 languageId="typst"/>
     </extensions>
+    -->
 
     <actions>
     </actions>

@@ -1,49 +1,46 @@
 package org.tinymist.intellij.lsp
 
 import com.intellij.openapi.project.Project
-import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+// import org.eclipse.lsp4j.jsonrpc.services.JsonNotification // This might need a new way to be handled
 import com.intellij.openapi.diagnostic.Logger
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import java.util.concurrent.CompletableFuture
 
-/**
- * Custom Language Client to handle Tinymist-specific LSP notifications.
- */
+// TODO: Re-evaluate how to integrate this client with j-a.dev LSP library.
+// The previous inheritance from LanguageClientImpl (lsp4ij) is no longer valid.
+// Custom notification handling and message interception need a new approach.
 class TinymistLanguageClient(
-    project: Project
-) : LanguageClientImpl(project) {
+    private val project: Project // Retain project if needed for future context
+) {
 
     companion object {
         private val LOG = Logger.getInstance(TinymistLanguageClient::class.java)
     }
 
-    override fun publishDiagnostics(diagnostics: PublishDiagnosticsParams) {
+    // This method was an override. Its functionality needs to be reintegrated if possible.
+    fun customPublishDiagnostics(diagnostics: PublishDiagnosticsParams) {
         val newDiagnostics = diagnostics.diagnostics.map { originalDiagnostic ->
             val originalMessage = originalDiagnostic.message
-            // Replace newlines with <br> for proper tooltip rendering
             val newMessage = originalMessage.replace("\n", "<br>")
 
             val codeAsString: String? = when {
                 originalDiagnostic.code == null -> null
                 originalDiagnostic.code.isLeft -> originalDiagnostic.code.left
                 originalDiagnostic.code.isRight -> originalDiagnostic.code.right.toString()
-                else -> null // Should not happen for Either
+                else -> null
             }
 
-            // Use the 5-argument constructor (Range, Message, Severity, Source, Code)
             val newDiagnostic = Diagnostic(
                 originalDiagnostic.range,
                 newMessage,
                 originalDiagnostic.severity,
                 originalDiagnostic.source,
-                codeAsString // Pass the processed code
+                codeAsString
             )
 
-            // Set other properties if they exist, using setters
             originalDiagnostic.relatedInformation?.let { newDiagnostic.relatedInformation = it }
             originalDiagnostic.tags?.let { newDiagnostic.tags = it }
             originalDiagnostic.codeDescription?.let { newDiagnostic.codeDescription = it }
@@ -51,31 +48,25 @@ class TinymistLanguageClient(
 
             newDiagnostic
         }
-        super.publishDiagnostics(PublishDiagnosticsParams(diagnostics.uri, newDiagnostics))
+        // How to send this back or intercept the original call needs to be determined
+        // with the j-a.dev library.
+        LOG.info("Custom publishDiagnostics called. URI: ${diagnostics.uri}, Count: ${newDiagnostics.size}")
+        // super.publishDiagnostics(PublishDiagnosticsParams(diagnostics.uri, newDiagnostics)) // This was the old call
     }
 
-    @JsonNotification("tinymist/document")
+    // @JsonNotification("tinymist/document") // TODO: Find new way to handle custom notifications
     fun handleDocument(params: Any?) {
-        // TODO: Replace Any with a specific data class if the structure of params is known.
-        // For now, just log that the notification was received.
         System.err.println("TinymistLanguageClient: Received tinymist/document with params: ${'$'}params")
-        // Future implementation: Update preview or other document-related views.
     }
 
-    @JsonNotification("tinymist/documentOutline")
+    // @JsonNotification("tinymist/documentOutline") // TODO: Find new way to handle custom notifications
     fun handleDocumentOutline(params: Any?) {
-        // TODO: Replace Any with the actual data class for outline parameters.
-        // For now, just log receipt of the notification.
         LOG.info("Received tinymist/documentOutline notification with params: ${'$'}params")
-        // Example of what might be done:
-        // val outlineData = parseOutlineParams(params) // Implement parsing
-        // ProjectActivity.getInstance(project).updateOutlineView(outlineData) // Example: if you have a way to update a view
     }
 
-    override fun showMessageRequest(params: ShowMessageRequestParams): CompletableFuture<MessageActionItem> {
-        LOG.warn("Received showMessageRequest from server. Type: ${params.type}, Message: '${params.message}'. Actions: ${params.actions}. Suppressing UI and returning null action item to avoid potential NPE in lsp4ij.")
-        // Returning a completed future with null, effectively ignoring the request from UI perspective
-        // and preventing the lsp4ij default handler from causing an NPE if params.getActions() is null.
+    // This method was an override. Its functionality needs to be reintegrated if possible.
+    fun customShowMessageRequest(params: ShowMessageRequestParams): CompletableFuture<MessageActionItem?> {
+        LOG.warn("Received showMessageRequest from server. Type: ${params.type}, Message: '${params.message}'. Actions: ${params.actions}. Suppressing UI and returning null action item.")
         return CompletableFuture.completedFuture(null)
     }
 }
