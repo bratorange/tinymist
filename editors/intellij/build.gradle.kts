@@ -34,6 +34,9 @@ repositories {
 dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.opentest4j)
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
+    testImplementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc.test:0.21.0")
 
     // Add explicit dependency on platform-impl using standard implementation scope
     // The repositories configured by the intellijPlatform plugin should contain this.
@@ -43,6 +46,10 @@ dependencies {
     intellijPlatform {
         intellijIdeaUltimate("2025.1")
         testFramework(TestFrameworkType.Platform)
+        // Consider adding specific versions if needed, e.g.
+        // testFramework("2025.1") 
+        // platform ("com.intellij.platform:ide-core-impl:2025.1")
+        // platform ("com.intellij.platform:ide-impl:2025.1")
         plugins(listOf("com.redhat.devtools.lsp4ij:0.13.0"))
     }
 }
@@ -131,6 +138,14 @@ tasks {
 
     publishPlugin {
         dependsOn(patchChangelog)
+    }
+
+    // Configure the test task to use JUnit Platform
+    test {
+        useJUnitPlatform()
+        systemProperty("java.awt.headless", "true") // Recommended for CI environments
+        // Add other necessary JVM arguments or system properties here
+        // e.g. systemProperty("idea.home.path", project.intellij.ideaDependency.get().classes.absolutePath)
     }
 }
 
